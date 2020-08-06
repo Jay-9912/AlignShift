@@ -1,8 +1,8 @@
 
 from __future__ import division
 import argparse
-import sys
-sys.path.append('/mnt/data3/alignconv/')
+#import sys
+#sys.path.append('/cluster/home/it_stu167/wwj/alignshift/AlignShift/')
 import os
 import torch
 torch.multiprocessing.set_sharing_strategy('file_system')
@@ -18,10 +18,10 @@ from collections import OrderedDict
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a detector')
-    parser.add_argument('config', help='train config file path')
-    parser.add_argument('--work_dir', help='the dir to save logs and models')
+    parser.add_argument('config', default='/cluster/home/it_stu167/wwj/alignshift/AlignShift/deeplesion/mconfigs/densenet_25d_2.py',help='train config file path') # mconfig
+    parser.add_argument('--work_dir', default='/cluster/home/it_stu167/wwj/adrenal/output/',help='the dir to save logs and models')
     parser.add_argument(
-        '--resume_from', help='the checkpoint file to resume from')
+        '--resume_from', default='/cluster/home/it_stu167/wwj/adrenal/checkpoint/checkpoint.txt',help='the checkpoint file to resume from')
     parser.add_argument(
         '--validate',
         action='store_true',
