@@ -1,10 +1,12 @@
+import sys
+sys.path.append('/cluster/home/it_stu167/wwj/alignshift/AlignShift/')
 import numpy as np
 import random
 import os
 import csv
 import cv2
 import logging 
-from pycocotools import mask as mutils
+#from pycocotools import mask as mutils
 from mmcv import Config
 import torch
 import os
@@ -14,30 +16,29 @@ from mmdet.datasets.pipelines import Compose
 from mmdet.datasets.custom import CustomDataset
 from skimage import measure
 
-root='' 
 @DATASETS.register_module
 class AdrenalDataset(CustomDataset):
 
-    CLASSES = ('adrenal')
+    CLASSES = ('anomoly','adrenal')# maybe wrong
     def __init__(self, 
                  ann_file, 
                  pipeline,
                  pre_pipeline,
                  dicm2png_cfg,
-                 data_root=root, 
-                 image_path='',
-                 label_path='',
+                 data_root=None, 
+                 image_path='/cluster/home/it_stu167/wwj/adrenal/x/',
+                 label_path='/cluster/home/it_stu167/wwj/adrenal/y/',
                  seg_prefix=None,
                  proposal_file=None,
                  test_mode=False,
                  ratio=0.5):
         self.data_path = data_root
-        self.classes = ['background', 'anomoly','adrenal']
+        self.classes = ['__background__', 'anomoly','adrenal']
         self.num_classes = len(self.classes)
         self.load_annotations(ann_file)
         self.img_ids = [a['filename'] for a in self.ann]
         self.cat_ids = self.classes
-        self.cfg = Config(dicm2png_cfg)   # ???
+        self.cfg = Config(dicm2png_cfg)   
         self.pipeline = Compose(pipeline)
         self.pre_pipeline = Compose(pre_pipeline)
         self.img_path = image_path
@@ -66,11 +67,11 @@ class AdrenalDataset(CustomDataset):
         image_fn = ann['filename']
         slice_intv = ann['pixdim'][2]
         spacing = ann['pixdim']
-        space_origin=ann['space origin']
+        space_origin=ann['space origin'] # maybe unnecessary
         ratio=self.ratio        
         rg=ann['rg']
         im, im_scale, idx = load_prep_np(self.img_path, image_fn, spacing, slice_intv,
-                                            num_slice=self.slice_num, is_train=self.is_train, ratio,rg)        
+                                            num_slice=self.slice_num, is_train=self.is_train, ratio=ratio, rg=rg)        
         label=get_labels(self.label_path,image_fn,idx)
         masks=get_masks_from_labels(label) # n*b*w
         boxes = get_boxes_from_masks(masks) # n*4
@@ -143,7 +144,7 @@ class AdrenalDataset(CustomDataset):
     
 
 
-def load_prep_np(data_dir, imname, spacing, slice_intv, cfg, num_slice=3, is_train=False, ratio, rg):
+def load_prep_np(data_dir, imname, spacing, slice_intv, cfg, ratio, rg, num_slice=3, is_train=False):
     """load volume, windowing, interpolate multiple slices, clip black border, resize according to spacing"""
     im,idx = load_multislice_randomly(data_dir, imname, slice_intv, num_slice, ratio, rg)
 
@@ -198,9 +199,11 @@ def get_labels(path,fn,idx):
 def get_masks_from_labels(labels):
     lb=labels.copy()
     masks=[]
-    lb[lb==1]=2
-    masks.append(np.hstack(lb[0:256,:],np.zeros((512,256),dtype=np.int8)))
-    masks.append(np.hstack(np.zeros((512,256),dtype=np.int8),lb[256:512,:]))
+    lb[lb==2]=1
+    if 1 in lb[0:256,:]:
+        masks.append(np.hstack(lb[0:256,:],np.zeros((512,256),dtype=np.int8)))
+    if 1 in lb[256:512,:]:
+        masks.append(np.hstack(np.zeros((512,256),dtype=np.int8),lb[256:512,:]))
     if 1 in labels[0:256,:]:
         left=labels[0:256,:].copy()
         left[left==2]=0
